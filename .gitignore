@@ -1,0 +1,48 @@
+# ============================
+# OS / System files
+# ============================
+.DS_Store
+Thumbs.db
+
+# ============================
+# Editor / IDE files
+# ============================
+.vscode/
+.idea/
+*.swp
+
+# ============================
+# Logs / Database dumps
+# ============================
+*.log
+*.sql
+*.sqlite
+*.db
+*.bak
+*.tmp
+
+# ============================
+# Dependencies (if ever used)
+# ============================
+vendor/
+node_modules/
+
+# ============================
+# Cache / Temp files
+# ============================
+cache/
+tmp/
+uploads/          # add if you store uploaded images/files locally
+
+# ============================
+# Sensitive Config files
+# ============================
+Database.php
+config.php
+.env
+*.env
+
+# ============================
+# XAMPP / Apache logs
+# ============================
+htdocs/error_log
