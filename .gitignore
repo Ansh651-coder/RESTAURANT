@@ -22,7 +22,7 @@ Thumbs.db
 *.tmp
 
 # ============================
-# Dependencies (if ever used)
+# Dependencies
 # ============================
 vendor/
 node_modules/
@@ -32,7 +32,7 @@ node_modules/
 # ============================
 cache/
 tmp/
-uploads/          # add if you store uploaded images/files locally
+uploads/
 
 # ============================
 # Sensitive Config files
