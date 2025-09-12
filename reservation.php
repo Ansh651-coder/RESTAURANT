@@ -29,13 +29,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['reserve_table'])) {
     $stmt->bind_param("iisssssis", $userId, $tableId, $name, $email, $phone, $date, $time, $partySize, $specialRequests);
 
     if ($stmt->execute()) {
+        $reservationId = $stmt->insert_id;
+
+        // Update table status
         $update = $con->prepare("UPDATE restaurant_tables SET status='reserved' WHERE id=?");
         $update->bind_param("i", $tableId);
         $update->execute();
-        $successMsg = "✅ Your table reservation has been confirmed!";
-    } else {
-        $errorMsg = "⚠️ Something went wrong while saving your reservation.";
+
+        // Redirect to payment page with reservation details
+        header("Location: payment.php?reservation_id=$reservationId");
+        exit();
     }
+
 }
 
 // Cancel reservation
@@ -420,7 +425,8 @@ ob_end_flush(); // Send output safely
                     <li><a href="home.php#home">🏠 Home</a></li>
                     <li><a href="home.php#about">ℹ️ About Us</a></li>
                     <li><a href="menu.php">📋 Menu</a></li>
-                    <li><a href="reservation.php" style="background-color: rgba(255,255,255,0.1);">📅 Reservation</a></li>
+                    <li><a href="reservation.php" style="background-color: rgba(255,255,255,0.1);">📅 Reservation</a>
+                    </li>
                     <li><a href="home.php#contact">📞 Contact</a></li>
                 </ul>
             </nav>
