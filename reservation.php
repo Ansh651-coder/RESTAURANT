@@ -1,9 +1,8 @@
 <?php
-
 session_start();
 include "DataBase.php";
 
-ob_start(); // Prevent "headers already sent" error
+ob_start(); // Prevent headers sent error
 
 if (!isset($_SESSION['user_id'])) {
     header("Location: Login.php");
@@ -22,66 +21,47 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['reserve_table'])) {
     $partySize = intval($_POST['partySize']);
     $specialRequests = trim($_POST['specialRequests']);
 
-    $sql = "INSERT INTO reservations 
-            (user_id, table_id, full_name, email, phone, booking_date, booking_time, party_size, special_requests, status) 
-            VALUES (?,?,?,?,?,?,?,?,?, 'active')";
-    $stmt = $con->prepare($sql);
-    $stmt->bind_param("iisssssis", $userId, $tableId, $name, $email, $phone, $date, $time, $partySize, $specialRequests);
+    $pricePerSeat = 500;
+    $totalAmount = $partySize * $pricePerSeat;
 
+    // Insert reservation
+    $stmt = $con->prepare("INSERT INTO reservations 
+        (user_id, table_number, full_name, email, phone, booking_date, booking_time, party_size) 
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
+    if (!$stmt) {
+        die("SQL Prepare failed: " . $con->error);
+    }
+    $stmt->bind_param("iissssii", $userId, $tableId, $name, $email, $phone, $date, $time, $partySize);
     if ($stmt->execute()) {
         $reservationId = $stmt->insert_id;
-
-        // Update table status
-        $update = $con->prepare("UPDATE restaurant_tables SET status='reserved' WHERE id=?");
-        $update->bind_param("i", $tableId);
-        $update->execute();
-
-        // Redirect to payment page with reservation details
-        header("Location: payment.php?reservation_id=$reservationId");
+        header("Location: payment.php?reservation_id=$reservationId&type=advance");
         exit();
-    }
-
-}
-
-// Cancel reservation
-if (isset($_GET['cancel'])) {
-    $resId = intval($_GET['cancel']);
-
-    // First get the table id for this reservation
-    $stmt = $con->prepare("SELECT table_id FROM reservations WHERE id=? AND user_id=?");
-    $stmt->bind_param("ii", $resId, $_SESSION['user_id']);
-    $stmt->execute();
-    $stmt->bind_result($tableId);
-    if ($stmt->fetch()) {
-        // Cancel reservation
-        $stmt->close();
-        $con->query("UPDATE reservations SET status='cancelled' WHERE id=$resId");
-
-        // Free the table
-        $update = $con->prepare("UPDATE restaurant_tables SET status='available' WHERE id=?");
-        $update->bind_param("i", $tableId);
-        $update->execute();
-
-        $successMsg = "❌ Your reservation has been cancelled.";
     } else {
-        $errorMsg = "⚠️ Reservation not found.";
+        $errorMsg = "⚠️ Error saving reservation: " . $stmt->error;
     }
 }
 
 // Fetch tables
 $tables = $con->query("SELECT * FROM restaurant_tables")->fetch_all(MYSQLI_ASSOC);
 
-// Fetch active reservations
+// Fetch user reservations
 $userId = $_SESSION['user_id'];
-$reservations = $con->query("SELECT r.*, t.table_number 
-                             FROM reservations r 
-                             JOIN restaurant_tables t ON r.table_id=t.id 
-                             WHERE r.user_id=$userId AND r.status='active'")
-    ->fetch_all(MYSQLI_ASSOC);
+$sql = "SELECT r.*, t.table_number,
+        COALESCE(SUM(CASE WHEN p.payment_type='advance' AND p.status='success' THEN p.amount END),0) as advance_paid,
+        COALESCE(SUM(CASE WHEN p.payment_type='final' AND p.status='success' THEN p.amount END),0) as fully_paid
+        FROM reservations r
+        JOIN restaurant_tables t ON r.table_number = t.id
+        LEFT JOIN payments p ON r.id = p.reservation_id
+        WHERE r.user_id = ?
+        GROUP BY r.id
+        ORDER BY r.booking_date DESC, r.booking_time DESC";
+$stmt = $con->prepare($sql);
+$stmt->bind_param("i", $userId);
+$stmt->execute();
+$reservations = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
 
-ob_end_flush(); // Send output safely
+ob_end_flush();
 ?>
-
 
 <!DOCTYPE html>
 <html lang="en">
@@ -439,8 +419,6 @@ ob_end_flush(); // Send output safely
             <div class="status-header">
                 <h2>Table Status</h2>
             </div>
-
-            <!-- Legend -->
             <div class="status-legend">
                 <div class="legend-item">
                     <div class="legend-dot available"></div><span>Available</span>
@@ -452,7 +430,6 @@ ob_end_flush(); // Send output safely
                     <div class="legend-dot occupied"></div><span>Occupied</span>
                 </div>
             </div>
-
             <div class="table-grid">
                 <?php foreach ($tables as $t): ?>
                     <div class="table-item <?= $t['status'] ?>" data-id="<?= $t['id'] ?>"
@@ -465,7 +442,7 @@ ob_end_flush(); // Send output safely
             </div>
         </div>
 
-        <!-- Reservation Form (hidden until table click) -->
+        <!-- Reservation Form -->
         <div class="reservation-form" id="reservationFormBox">
             <div class="form-header">
                 <h1>📅 Table Reservation</h1>
@@ -509,18 +486,34 @@ ob_end_flush(); // Send output safely
         <!-- My Reservations -->
         <div class="reservation-list">
             <h2>My Reservations</h2>
-            <?php foreach ($reservations as $r): ?>
-                <div class="reservation-item">
-                    <strong><?= $r['table_number'] ?></strong> - <?= $r['booking_date'] ?> at <?= $r['booking_time'] ?>
-                    for <?= $r['party_size'] ?> people
-                    <a href="reservation.php?cancel=<?= $r['id'] ?>" onclick="return confirm('Cancel this reservation?')">❌
-                        Cancel</a>
+            <?php foreach ($reservations as $row):
+                $pricePerSeat = 500;
+                $totalAmount = $row['party_size'] * $pricePerSeat;
+                $advanceRequired = $totalAmount * 0.5;
+                $remainingRequired = $totalAmount - $row['advance_paid'];
+                ?>
+                <div class="reservation-card">
+                    <h3>Table <?= $row['table_number'] ?> | <?= $row['booking_date'] ?>     <?= $row['booking_time'] ?></h3>
+                    <p>Party Size: <?= $row['party_size'] ?> | Status: <?= ucfirst($row['status']) ?></p>
+                    <p><b>Advance Payment:</b>
+                        <?= $row['advance_paid'] ? "✅ Paid (₹$row[advance_paid])" : "❌ Pending (₹$advanceRequired)" ?></p>
+                    <p><b>Final Payment:</b>
+                        <?= $row['fully_paid'] ? "✅ Paid (₹$row[fully_paid])" : "❌ Pending (₹$remainingRequired)" ?></p>
+
+                    <?php if (!$row['advance_paid']): ?>
+                        <a href="payment.php?reservation_id=<?= $row['id'] ?>&type=advance" class="pay-btn">Pay Advance
+                            ₹<?= $advanceRequired ?></a>
+                    <?php elseif ($row['advance_paid'] && !$row['fully_paid']): ?>
+                        <a href="payment.php?reservation_id=<?= $row['id'] ?>&type=final" class="pay-btn">Pay Remaining
+                            ₹<?= $remainingRequired ?></a>
+                    <?php else: ?>
+                        <p style="color:green;"><b>✅ Fully Paid</b></p>
+                    <?php endif; ?>
                 </div>
             <?php endforeach; ?>
         </div>
 
     </main>
-
     <script>
         let formBox = document.getElementById("reservationFormBox");
         let tableInput = document.getElementById("selectedTable");

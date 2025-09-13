@@ -2,61 +2,66 @@
 session_start();
 include "../DataBase.php";
 
-// ✅ Handle Reservation Actions
-if (isset($_GET['action']) && isset($_GET['id'])) {
+// Handle reservation actions (approve, cancel, complete, delete)
+if (isset($_GET['action'], $_GET['id'])) {
     $id = intval($_GET['id']);
     $action = $_GET['action'];
 
-    // Fetch table_id before update
-    $stmt = $con->prepare("SELECT table_id FROM reservations WHERE id=?");
+    $stmt = $con->prepare("SELECT table_number FROM reservations WHERE id=?");
     $stmt->bind_param("i", $id);
     $stmt->execute();
     $stmt->bind_result($tableId);
     $stmt->fetch();
     $stmt->close();
 
-    if ($action == "approve") {
-        $con->query("UPDATE reservations SET status='active' WHERE id=$id");
-        $con->query("UPDATE restaurant_tables SET status='reserved' WHERE id=$tableId");
-    } elseif ($action == "cancel") {
+    if ($action == "approve")
+        $con->query("UPDATE reservations SET status='confirmed' WHERE id=$id");
+    elseif ($action == "cancel") {
         $con->query("UPDATE reservations SET status='cancelled' WHERE id=$id");
         $con->query("UPDATE restaurant_tables SET status='available' WHERE id=$tableId");
     } elseif ($action == "complete") {
-        $con->query("UPDATE reservations SET status='completed' WHERE id=$id");
+        $con->query("UPDATE reservations SET status='completed', fully_paid=1 WHERE id=$id");
         $con->query("UPDATE restaurant_tables SET status='available' WHERE id=$tableId");
-    } elseif ($action == "delete") {
+    } elseif ($action == "delete")
         $con->query("DELETE FROM reservations WHERE id=$id");
-    }
+
     header("Location: manage_reservations.php");
     exit();
 }
 
-// ✅ Handle Table Status Update
+// ✅ Handle Table Status Update (Manual by Admin)
 if (isset($_GET['table_action']) && isset($_GET['table_id'])) {
     $table_id = intval($_GET['table_id']);
     $new_status = $_GET['table_action'];
 
     $allowed = ['available', 'reserved', 'occupied'];
+
     if (in_array($new_status, $allowed)) {
         $stmt = $con->prepare("UPDATE restaurant_tables SET status=? WHERE id=?");
         $stmt->bind_param("si", $new_status, $table_id);
         $stmt->execute();
     }
+
     header("Location: manage_reservations.php");
     exit();
 }
 
-// ✅ Fetch Reservations
-$sql = "SELECT r.*, t.table_number, u.fullName 
-        FROM reservations r
-        JOIN restaurant_tables t ON r.table_id = t.id
-        JOIN register u ON r.user_id = u.id
-        ORDER BY r.booking_date DESC, r.booking_time DESC";
-$reservations = $con->query($sql);
 
-// ✅ Fetch Tables
-$tables = $con->query("SELECT * FROM restaurant_tables ORDER BY CAST(SUBSTRING(table_number, 2) AS UNSIGNED) ASC");
+// Fetch reservations
+$sql = "SELECT r.*, t.table_number, u.fullName,
+        COALESCE(SUM(CASE WHEN p.payment_type='advance' AND p.status='success' THEN p.amount END),0) as advance_paid,
+        COALESCE(SUM(CASE WHEN p.payment_type='final' AND p.status='success' THEN p.amount END),0) as final_paid
+        FROM reservations r
+        JOIN restaurant_tables t ON r.table_number = t.id
+        JOIN register u ON r.user_id = u.id
+        LEFT JOIN payments p ON r.id = p.reservation_id
+        GROUP BY r.id
+        ORDER BY r.booking_date DESC, r.booking_time DESC";
+
+$reservations = $con->query($sql);
+$tables = $con->query("SELECT * FROM restaurant_tables ORDER BY table_number ASC");
 ?>
+
 <!DOCTYPE html>
 <html lang="en">
 
@@ -194,7 +199,7 @@ $tables = $con->query("SELECT * FROM restaurant_tables ORDER BY CAST(SUBSTRING(t
 </head>
 
 <body>
-    <?php include "admin_sidebar.php"; ?> <!-- ✅ reuse sidebar -->
+    <?php include "admin_sidebar.php"; ?>
     <div class="main">
         <h1>Manage Reservations</h1>
         <table>
@@ -206,9 +211,15 @@ $tables = $con->query("SELECT * FROM restaurant_tables ORDER BY CAST(SUBSTRING(t
                 <th>Time</th>
                 <th>People</th>
                 <th>Status</th>
+                <th>Payments</th>
                 <th>Actions</th>
             </tr>
-            <?php while ($row = $reservations->fetch_assoc()): ?>
+            <?php while ($row = $reservations->fetch_assoc()):
+                $pricePerSeat = 500;
+                $totalAmount = $row['party_size'] * $pricePerSeat;
+                $advanceRequired = $totalAmount * 0.5;
+                $remainingRequired = $totalAmount - $row['advance_paid'];
+                ?>
                 <tr>
                     <td><?= $row['id'] ?></td>
                     <td><?= htmlspecialchars($row['fullName']) ?><br><?= $row['email'] ?><br><?= $row['phone'] ?></td>
@@ -218,14 +229,17 @@ $tables = $con->query("SELECT * FROM restaurant_tables ORDER BY CAST(SUBSTRING(t
                     <td><?= $row['party_size'] ?></td>
                     <td><span class="badge <?= $row['status'] ?>"><?= ucfirst($row['status']) ?></span></td>
                     <td>
+                        <b>Advance:</b>
+                        <?= $row['advance_paid'] >= $advanceRequired ? "✅ Paid (₹" . $row['advance_paid'] . ")" : "❌ Pending (₹" . $advanceRequired . ")" ?><br>
+                        <b>Remaining:</b>
+                        <?= $row['final_paid'] >= $remainingRequired ? "✅ Paid (₹" . $row['final_paid'] . ")" : "❌ Pending (₹" . $remainingRequired . ")" ?>
+                    </td>
+                    <td>
                         <?php if ($row['status'] == "active"): ?>
                             <a class="complete action" href="?action=complete&id=<?= $row['id'] ?>">Complete</a>
                             <a class="cancel action" href="?action=cancel&id=<?= $row['id'] ?>"
                                 onclick="return confirm('Cancel this reservation?')">Cancel</a>
-                        <?php elseif ($row['status'] == "cancelled"): ?>
-                            <a class="delete action" href="?action=delete&id=<?= $row['id'] ?>"
-                                onclick="return confirm('Delete this record?')">Delete</a>
-                        <?php elseif ($row['status'] == "completed"): ?>
+                        <?php elseif ($row['status'] == "cancelled" || $row['status'] == "completed"): ?>
                             <a class="delete action" href="?action=delete&id=<?= $row['id'] ?>"
                                 onclick="return confirm('Delete this record?')">Delete</a>
                         <?php else: ?>

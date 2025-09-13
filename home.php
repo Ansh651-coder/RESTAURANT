@@ -830,7 +830,6 @@ if (isset($_SESSION['from_login']) && $_SESSION['from_login'] === true) {
             });
         }, observerOptions);
 
-
         var fromLogin = <?php echo $fromLogin ? 'true' : 'false'; ?>;
 
         if (fromLogin) {
