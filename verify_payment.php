@@ -1,12 +1,12 @@
 <?php
 include "DataBase.php";
 require('razorpay-php/Razorpay.php');
+include "payment_config.php"; // <-- include secure config file
 
 use Razorpay\Api\Api;
 
-$keyId = "rzp_test_RGzL2916LDmPiD";
-$keySecret = "IluLGWZGirtnqBWK6zHMN0I6";
-$api = new Api($keyId, $keySecret);
+$api = new Api(RAZORPAY_KEY_ID, RAZORPAY_KEY_SECRET);
+
 
 $paymentId = $_GET['payment_id'];
 $orderId = $_GET['order_id'];

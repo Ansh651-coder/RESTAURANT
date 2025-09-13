@@ -2,6 +2,7 @@
 session_start();
 include "DataBase.php";
 require('razorpay-php/Razorpay.php');  // manually downloaded SDK
+include "payment_config.php"; // <-- include secure config file
 
 use Razorpay\Api\Api;
 
@@ -20,10 +21,8 @@ if (!$res) {
 $totalAmount = 2000; // later you can calculate dynamically
 $advanceAmount = $totalAmount / 2;
 
-$keyId = "rzp_test_RGzL2916LDmPiD";      // your Test Key ID
-$keySecret = "IluLGWZGirtnqBWK6zHMN0I6"; // your Test Key Secret
+$api = new Api(RAZORPAY_KEY_ID, RAZORPAY_KEY_SECRET);
 
-$api = new Api($keyId, $keySecret);
 
 // Create Razorpay Order
 $order = $api->order->create([
@@ -52,7 +51,7 @@ $con->query("INSERT INTO payments (reservation_id, amount, status, razorpay_orde
 
     <script>
         var options = {
-            "key": "<?= $keyId ?>",
+            "key": "<?= RAZORPAY_KEY_ID ?>",
             "amount": "<?= $advanceAmount * 100 ?>",
             "currency": "INR",
             "name": "Wok N Bowl",

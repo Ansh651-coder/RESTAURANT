@@ -39,6 +39,7 @@ uploads/
 # ============================
 Database.php
 config.php
+payment_config.php
 .env
 *.env
 
