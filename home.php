@@ -709,7 +709,7 @@ if (isset($_SESSION['from_login']) && $_SESSION['from_login'] === true) {
                     <p>₹299</p>
                 </div>
                 <div class="item">
-                    <img src="admin\uploads\menu\1757432243_Aloo Tikki.jpg" alt="Pasta">
+                    <img src="uploads\menu\1757432243_Aloo Tikki.jpg" alt="Pasta">
                     <h3>Italian Pasta</h3>
                     <p>₹199</p>
                 </div>
