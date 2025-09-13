@@ -98,7 +98,7 @@ if (isset($_POST['resendOtp'])) {
             $mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
             $mail->Port = 587;
 
-            $mail->setFrom('your_email@gmail.com', 'Restaurant System');
+            $mail->setFrom('23bmiit155@gmail.com', 'Restaurant System');
             $mail->addAddress($email);
 
             $mail->isHTML(true);
