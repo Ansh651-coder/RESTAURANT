@@ -1,18 +1,19 @@
 #!/bin/bash
-# Auto sync script: Pull latest changes, then push local ones
+# auto_push.sh - Auto commit & push to GitHub
 
-cd /c/xampp/htdocs/RESTAURANT || exit
+cd /c/xampp/htdocs/RESTAURANT || exit 1
 
-echo "🔄 Pulling latest changes from GitHub..."
-git pull origin main
+# Stage all changes
+git add -A
 
-echo "📤 Adding local changes..."
-git add .
+# If no changes, exit
+if git diff --cached --quiet; then
+  echo "No changes to commit."
+  exit 0
+fi
 
-echo "💬 Committing..."
-git commit -m "Auto commit on $(date)" || echo "⚠️ Nothing to commit."
+# Commit with timestamp
+git commit -m "Auto-commit: $(date '+%Y-%m-%d %H:%M:%S')"
 
-echo "⬆️ Pushing to GitHub..."
+# Push to GitHub
 git push origin main
-
-echo "✅ Sync complete!"

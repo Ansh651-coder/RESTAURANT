@@ -281,12 +281,12 @@ require 'PHPMailer/src/SMTP.php';
                     $mail->isSMTP();
                     $mail->Host       = 'smtp.gmail.com';
                     $mail->SMTPAuth   = true;
-                    $mail->Username   = 'your_email@gmail.com';
-                    $mail->Password   = 'your_app_password';
+                    $mail->Username   = '23bmiit155@gmail.com';
+                    $mail->Password   = 'vwgl rrft tpxf tawc';
                     $mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
                     $mail->Port       = 587;
 
-                    $mail->setFrom('your_email@gmail.com', 'Restaurant System');
+                    $mail->setFrom('23bmiit155@gmail.com', 'Restaurant System');
                     $mail->addAddress($email, $Fullname);
 
                     $mail->isHTML(true);
