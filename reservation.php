@@ -483,12 +483,12 @@ ob_end_flush(); // Send output safely
                 <div class="form-group"><label>Time *</label>
                     <select name="bookingTime" required>
                         <option value="">Select Time</option>
-                        <option value="12:00">12:00 PM</option>
-                        <option value="12:30">12:30 PM</option>
-                        <option value="18:00">6:00 PM</option>
-                        <option value="19:00">7:00 PM</option>
-                        <option value="20:00">8:00 PM</option>
-                        <option value="21:00">9:00 PM</option>
+                        <option value="12:00 PM">12:00 PM</option>
+                        <option value="12:30 PM">12:30 PM</option>
+                        <option value="6:00 PM">6:00 PM</option>
+                        <option value="7:00 PM">7:00 PM</option>
+                        <option value="8:00 PM">8:00 PM</option>
+                        <option value="9:00 PM">9:00 PM</option>
                     </select>
                 </div>
                 <div class="form-group"><label>Number of People *</label>

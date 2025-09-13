@@ -4,8 +4,8 @@ require('razorpay-php/Razorpay.php');
 
 use Razorpay\Api\Api;
 
-$keyId = "rzp_test_RGnV1AM3laAkfA";
-$keySecret = "WtvX2AMs3hrOJdf7BlUlhtY";
+$keyId = "rzp_test_RGzL2916LDmPiD";
+$keySecret = "IluLGWZGirtnqBWK6zHMN0I6";
 $api = new Api($keyId, $keySecret);
 
 $paymentId = $_GET['payment_id'];

@@ -20,8 +20,8 @@ if (!$res) {
 $totalAmount = 2000; // later you can calculate dynamically
 $advanceAmount = $totalAmount / 2;
 
-$keyId = "rzp_test_RGnV1AM3laAkfA";      // your Test Key ID
-$keySecret = "WtvX2AMs3hrOJdf7BlUlhtY"; // your Test Key Secret
+$keyId = "rzp_test_RGzL2916LDmPiD";      // your Test Key ID
+$keySecret = "IluLGWZGirtnqBWK6zHMN0I6"; // your Test Key Secret
 
 $api = new Api($keyId, $keySecret);
 

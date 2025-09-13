@@ -583,6 +583,18 @@
             color: #1d3557;
         }
     </style>
+    <?php if (isset($_SESSION['user_id'])): ?>
+        <script>
+            // Only logged-in users get back button trap
+            history.pushState(null, null, location.href);
+
+            window.onpopstate = function () {
+                if (!location.hash) {
+                    window.location.href = "https://www.google.com";
+                }
+            };
+        </script>
+    <?php endif; ?>
 </head>
 
 <body data-role="customer">
