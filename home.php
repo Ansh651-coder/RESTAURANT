@@ -1,3 +1,21 @@
+<?php
+session_start();
+
+// Check if user is logged in
+if (!isset($_SESSION['user_id']) && !isset($_SESSION['admin'])) {
+    header("Location: Login.php");
+    exit();
+}
+
+// Detect if just came from login
+$fromLogin = false;
+if (isset($_SESSION['from_login']) && $_SESSION['from_login'] === true) {
+    $fromLogin = true;
+    unset($_SESSION['from_login']); // clear it after use
+}
+?>
+
+
 <!DOCTYPE html>
 <html lang="en">
 
@@ -812,13 +830,17 @@
             });
         }, observerOptions);
 
-        // Observe feature cards
-        document.querySelectorAll('.feature-card').forEach(card => {
-            card.style.opacity = '0';
-            card.style.transform = 'translateY(20px)';
-            card.style.transition = 'all 0.6s ease';
-            observer.observe(card);
-        });
+
+        var fromLogin = <?php echo $fromLogin ? 'true' : 'false'; ?>;
+
+        if (fromLogin) {
+            // Prevent going back to login, redirect to Google instead
+            history.pushState(null, "", location.href);
+            window.onpopstate = function () {
+                window.location.href = "https://www.google.com";
+            };
+        }
+
     </script>
 </body>
 
